@@ -5,8 +5,9 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../app/generated/prisma"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "linux-musl"]
 }
 
 datasource db {
@@ -15,42 +16,64 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// --- 1. CONFIGURAÇÕES DO PERFIL (SOBRE MIM) ---
 model Profile {
+  id           String   @id @default(cuid())
+  fullName     String
+  headline     String   // Ex: "Jornalista | Fotógrafa"
+  bio          String   @db.Text
+  profileImage String?
+  email        String
+  phone        String
+  linkedinUrl  String?
+  instagramUrl String?
+  location     String
+  
+  skills       Skill[]
+}
+
+model Skill {
   id        String   @id @default(cuid())
   name      String
-  role      String
-  about     String   @db.Text
-  location  String
-  email     String
-  phone     String
-  portfolio String?
-  skills    String[] 
+  profileId String?
+  Profile   Profile? @relation(fields: [profileId], references: [id])
 }
 
+// --- 2. CURRÍCULO (EXPERIÊNCIA E EDUCAÇÃO) ---
 model Experience {
-  id          String   @id @default(cuid())
-  company     String
-  role        String
-  period      String
-  description String   @db.Text
-  order       Int      @default(0) 
+  id          String    @id @default(cuid())
+  company     String    // Ou Instituição de Ensino
+  role        String    // Cargo ou Curso
+  startDate   DateTime? // Tornando opcional para facilitar cadastro rápido
+  endDate     DateTime?
+  description String?   @db.Text
+  isAcademic  Boolean   @default(false) // false = Trabalho, true = Educação
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
 }
 
-model Education {
-  id          String   @id @default(cuid())
-  institution String
-  degree      String
-  status      String?
-  year        String?
-  order       Int      @default(0)
-}
-
-
+// --- 3. PORTFÓLIO (POSTAGENS/PROJETOS) ---
 model Project {
   id          String   @id @default(cuid())
   title       String
-  description String?
-  imageUrl    String?
-  link        String?
-  category    String
+  slug        String   @unique
+  description String?  @db.Text
+  category    String   // "Online", "Impresso", "Videos"
+  date        DateTime @default(now())
+  
+  // Conteúdo visual
+  coverImage  String?  // Capa do projeto (Upload ou Link)
+  mediaUrl    String?  // Link externo (YouTube, Site da notícia)
+  mediaType   String   @default("IMAGE") // "IMAGE", "VIDEO", "GALLERY"
+  
+  featured    Boolean  @default(false) // Destaque na home?
+  createdAt   DateTime @default(now())
+}
+
+// Modelo extra caso queira salvar configurações gerais do site
+model SiteSettings {
+  id             String @id @default(cuid())
+  heroTitle      String?
+  heroSubtitle   String?
+  footerText     String?
 }
